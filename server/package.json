@@ -4,7 +4,7 @@
   "description": "Backend for project tree generator",
   "main": "server.js",
   "scripts": {
-    "start": "node src/server.js",
+    "start": "node /project-tree-generator/server/src/server.js",
     "dev": "nodemon src/server.js",
     "setup": "node src/setup.js"
   },
