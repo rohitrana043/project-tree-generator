@@ -1,0 +1,73 @@
+# Dependencies
+node_modules/
+*/node_modules/
+**/node_modules/
+package-lock.json
+yarn.lock
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+**/.env
+
+# Build files
+/build
+/dist
+**/build
+**/dist
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary directories
+/tmp
+**/tmp
+**/tmp/*
+server/src/tmp/*
+!server/src/tmp/.gitkeep
+server/src/server/tmp/*
+!server/src/server/tmp/.gitkeep
+!server/src/server/tmp/**/.gitkeep
+
+# Upload directories
+server/src/tmp/uploads/*
+!server/src/tmp/uploads/.gitkeep
+server/src/server/tmp/uploads/*
+!server/src/server/tmp/uploads/.gitkeep
+
+# Extracted files
+server/src/tmp/extracted/*
+!server/src/tmp/extracted/.gitkeep
+server/src/server/tmp/extracted/*
+!server/src/server/tmp/extracted/.gitkeep
+
+# Structure files
+server/src/tmp/structures/*
+!server/src/tmp/structures/.gitkeep
+server/src/server/tmp/structures/*
+!server/src/server/tmp/structures/.gitkeep
+
+# IDE and editor files
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+.directory
+*~
+
+# Testing
+/coverage
+**/coverage
+
+# Miscellaneous
+.DS_Store
+Thumbs.db
+.cache/

@@ -1,0 +1,62 @@
+.alert-message {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  border-radius: 4px;
+  animation: fadeIn 0.3s ease;
+}
+
+.alert-message.info {
+  background-color: #e3f2fd;
+  color: #0d47a1;
+  border-left: 4px solid #2196f3;
+}
+
+.alert-message.success {
+  background-color: #e8f5e9;
+  color: #1b5e20;
+  border-left: 4px solid #4caf50;
+}
+
+.alert-message.warning {
+  background-color: #fff8e1;
+  color: #ff6f00;
+  border-left: 4px solid #ffc107;
+}
+
+.alert-message.error {
+  background-color: #ffebee;
+  color: #b71c1c;
+  border-left: 4px solid #f44336;
+}
+
+.alert-content {
+  flex: 1;
+}
+
+.alert-close {
+  background: none;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0 0.5rem;
+  color: inherit;
+  opacity: 0.7;
+}
+
+.alert-close:hover {
+  opacity: 1;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

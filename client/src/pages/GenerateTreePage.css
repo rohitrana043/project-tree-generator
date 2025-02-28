@@ -1,0 +1,48 @@
+.generate-tree-container {
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: var(--box-shadow);
+  padding: 2rem;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.generate-tree-container h1 {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.react-tabs__tab-list {
+  border-bottom: 1px solid var(--border-color);
+  margin-bottom: 2rem;
+}
+
+.react-tabs__tab {
+  display: inline-block;
+  border: 1px solid transparent;
+  border-bottom: none;
+  bottom: -1px;
+  position: relative;
+  list-style: none;
+  padding: 0.75rem 1.5rem;
+  cursor: pointer;
+  margin-right: 0.5rem;
+  border-radius: 4px 4px 0 0;
+}
+
+.react-tabs__tab--selected {
+  background: white;
+  border-color: var(--border-color);
+  color: var(--primary-color);
+  border-bottom: 2px solid var(--primary-color);
+}
+
+.result-section {
+  margin-top: 2rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border-color);
+}
+
+.result-section h2 {
+  margin-bottom: 1rem;
+}

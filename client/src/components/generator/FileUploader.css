@@ -1,0 +1,79 @@
+.file-uploader-container {
+  padding: 1rem;
+}
+
+.drop-zone {
+  border: 2px dashed var(--border-color);
+  border-radius: 8px;
+  padding: 2rem;
+  text-align: center;
+  transition: all 0.3s ease;
+  background-color: #f8f9fa;
+  cursor: pointer;
+}
+
+.drop-zone.dragging {
+  border-color: var(--primary-color);
+  background-color: rgba(52, 152, 219, 0.05);
+}
+
+.drop-zone.has-file {
+  border-color: var(--success-color);
+  background-color: rgba(39, 174, 96, 0.05);
+}
+
+.drop-zone-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.upload-icon {
+  font-size: 3rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.browse-btn {
+  background-color: var(--primary-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 1rem;
+  cursor: pointer;
+  margin: 1rem 0;
+}
+
+.file-requirements {
+  font-size: 0.9rem;
+  color: var(--text-light);
+  margin-top: 1rem;
+}
+
+.file-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 1rem 0;
+}
+
+.file-name {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.file-size {
+  color: var(--text-light);
+  font-size: 0.9rem;
+}
+
+.upload-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.upload-actions button {
+  margin: 0 0.5rem;
+}

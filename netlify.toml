@@ -1,0 +1,13 @@
+[build]
+  base = "client/"
+  publish = "build/"
+  command = "npm run build"
+
+[build.environment]
+  CI = "false"
+
+# Redirect all requests to index.html for SPA routing
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
