@@ -1,6 +1,7 @@
-// controllers/builderController.js - Universal tree structure handler
+// controllers/builderController.js - Universal tree structure handler with improved cleanup
 const structureBuilder = require('../services/structureBuilder');
 const treeGenerator = require('../services/treeGenerator');
+const cleanupUtils = require('../utils/cleanupUtils');
 const fs = require('fs');
 const path = require('path');
 
@@ -64,6 +65,10 @@ exports.generateStructure = async (req, res, next) => {
       `Structure built for project "${projectName}" at ${zipFilePath}, size: ${zipStats.size} bytes`
     );
 
+    // Record paths for cleanup before they might be modified
+    const zipPathToCleanup = zipFilePath;
+    const tempDirToCleanup = tempDir;
+
     // Send zip file to client
     res.download(zipFilePath, `${projectName}.zip`, (err) => {
       if (err) {
@@ -72,37 +77,14 @@ exports.generateStructure = async (req, res, next) => {
       }
 
       // Clean up temporary files after download (with a delay to ensure download completes)
-      setTimeout(() => {
-        try {
-          if (zipFilePath && fs.existsSync(zipFilePath)) {
-            fs.unlinkSync(zipFilePath);
-            console.log(`Deleted zip file: ${zipFilePath}`);
-          }
-
-          if (tempDir && fs.existsSync(tempDir)) {
-            fs.rmSync(tempDir, { recursive: true, force: true });
-            console.log(`Deleted temporary directory: ${tempDir}`);
-          }
-        } catch (cleanupError) {
-          console.error('Error during cleanup:', cleanupError);
-        }
-      }, 5000); // 5 second delay
+      cleanupUtils.scheduleCleanup(zipPathToCleanup, tempDirToCleanup, 10000); // 10-second delay
     });
   } catch (error) {
     console.error('Error generating structure:', error);
 
     // Clean up in case of error
-    try {
-      if (zipFilePath && fs.existsSync(zipFilePath)) {
-        fs.unlinkSync(zipFilePath);
-      }
-
-      if (tempDir && fs.existsSync(tempDir)) {
-        fs.rmSync(tempDir, { recursive: true, force: true });
-      }
-    } catch (cleanupError) {
-      console.error('Error during error cleanup:', cleanupError);
-    }
+    cleanupUtils.safeDeleteFile(zipFilePath);
+    cleanupUtils.safeDeleteDirectory(tempDir);
 
     // Send error response if headers haven't been sent yet
     if (!res.headersSent) {
@@ -159,6 +141,50 @@ exports.previewStructure = async (req, res, next) => {
     }
   } catch (error) {
     console.error('Error previewing structure:', error);
+    if (!res.headersSent) {
+      next(error);
+    }
+  }
+};
+
+// Validate tree structure
+exports.validateStructure = async (req, res, next) => {
+  try {
+    const { treeText } = req.body;
+
+    if (!treeText) {
+      return res.status(400).json({ message: 'Tree text is required' });
+    }
+
+    try {
+      // Try to extract root name using standard parsing
+      const cleanedText = treeGenerator.cleanTreeText(treeText);
+      const { rootName } = treeGenerator.parseTreeText(cleanedText);
+
+      res.status(200).json({
+        valid: true,
+        message: `Valid tree structure found with root "${rootName}"`,
+      });
+    } catch (parseError) {
+      // If standard parsing fails, check if we can at least find a root name
+      const rootName = extractRootName(treeText);
+
+      if (rootName && rootName !== 'project') {
+        // We found something that looks like a root name
+        res.status(200).json({
+          valid: true,
+          message: `Structure appears valid with root "${rootName}" (simplified validation)`,
+          simplified: true,
+        });
+      } else {
+        res.status(200).json({
+          valid: false,
+          message: parseError.message,
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Error validating structure:', error);
     if (!res.headersSent) {
       next(error);
     }
@@ -234,47 +260,3 @@ function calculateStructureStats(tree) {
     maxBreadth,
   };
 }
-
-// Validate tree structure
-exports.validateStructure = async (req, res, next) => {
-  try {
-    const { treeText } = req.body;
-
-    if (!treeText) {
-      return res.status(400).json({ message: 'Tree text is required' });
-    }
-
-    try {
-      // Try to extract root name using standard parsing
-      const cleanedText = treeGenerator.cleanTreeText(treeText);
-      const { rootName } = treeGenerator.parseTreeText(cleanedText);
-
-      res.status(200).json({
-        valid: true,
-        message: `Valid tree structure found with root "${rootName}"`,
-      });
-    } catch (parseError) {
-      // If standard parsing fails, check if we can at least find a root name
-      const rootName = extractRootName(treeText);
-
-      if (rootName && rootName !== 'project') {
-        // We found something that looks like a root name
-        res.status(200).json({
-          valid: true,
-          message: `Structure appears valid with root "${rootName}" (simplified validation)`,
-          simplified: true,
-        });
-      } else {
-        res.status(200).json({
-          valid: false,
-          message: parseError.message,
-        });
-      }
-    }
-  } catch (error) {
-    console.error('Error validating structure:', error);
-    if (!res.headersSent) {
-      next(error);
-    }
-  }
-};

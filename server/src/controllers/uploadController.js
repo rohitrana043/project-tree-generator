@@ -1,11 +1,15 @@
-// controllers/uploadController.js - Improved file upload controller
+// controllers/uploadController.js - Improved file upload controller with better cleanup
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
 const treeGenerator = require('../services/treeGenerator');
+const cleanupUtils = require('../utils/cleanupUtils');
 
 // Generate tree structure from uploaded file
 exports.generateTree = async (req, res, next) => {
+  let filePath = null;
+  let extractPath = null;
+
   try {
     console.log('Upload request received');
 
@@ -21,7 +25,7 @@ exports.generateTree = async (req, res, next) => {
       size: req.file.size,
     });
 
-    const filePath = req.file.path;
+    filePath = req.file.path;
     const fileName = path.parse(req.file.originalname).name;
 
     // Verify file exists before proceeding
@@ -37,8 +41,8 @@ exports.generateTree = async (req, res, next) => {
 
     // Create a unique extraction directory
     const timestamp = Date.now();
-    const extractPath = path.resolve(
-      process.env.EXTRACTED_DIR || path.join(__dirname, './tmp/extracted'),
+    extractPath = path.resolve(
+      process.env.EXTRACTED_DIR || path.join(__dirname, '../tmp/extracted'),
       timestamp.toString()
     );
 
@@ -54,6 +58,9 @@ exports.generateTree = async (req, res, next) => {
       console.log('Zip file extracted successfully');
     } catch (extractError) {
       console.error('Error extracting zip file:', extractError);
+      // Clean up the uploaded file since we're returning an error
+      cleanupUtils.safeDeleteFile(filePath);
+      cleanupUtils.safeDeleteDirectory(extractPath);
       return res.status(400).json({
         message: 'Invalid or corrupted zip file',
         error: extractError.message,
@@ -68,37 +75,25 @@ exports.generateTree = async (req, res, next) => {
     );
     console.log('Tree structure generated successfully');
 
-    // Clean up temporary files
-    try {
-      console.log(`Cleaning up: Removing ${filePath}`);
-      fs.unlinkSync(filePath);
-
-      console.log(`Cleaning up: Removing ${extractPath}`);
-      fs.rmSync(extractPath, { recursive: true, force: true });
-    } catch (cleanupError) {
-      console.warn('Warning: Error during cleanup:', cleanupError.message);
-      // Continue despite cleanup errors
-    }
-
-    console.log('Sending response with tree structure');
+    // Send response with tree structure first
     res.status(200).json({
       treeText,
       fileName,
+    });
+
+    // Clean up temporary files after response has been sent
+    // This ensures the response is not delayed by cleanup operations
+    process.nextTick(() => {
+      console.log('Performing cleanup after response sent');
+      cleanupUtils.safeDeleteFile(filePath);
+      cleanupUtils.safeDeleteDirectory(extractPath);
     });
   } catch (error) {
     console.error('Error in generateTree:', error);
 
     // Clean up temporary files if an error occurs
-    if (req.file && fs.existsSync(req.file.path)) {
-      try {
-        fs.unlinkSync(req.file.path);
-      } catch (cleanupError) {
-        console.warn(
-          'Warning: Error cleaning up file after error:',
-          cleanupError.message
-        );
-      }
-    }
+    cleanupUtils.safeDeleteFile(filePath);
+    cleanupUtils.safeDeleteDirectory(extractPath);
 
     next(error);
   }

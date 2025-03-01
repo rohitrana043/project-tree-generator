@@ -1,3 +1,4 @@
+// Modified server.js with temp directory handling and periodic cleanup
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -14,6 +15,9 @@ const result = dotenv.config({ path: envPath });
 const githubRoutes = require('./routes/githubRoutes');
 const uploadRoutes = require('./routes/uploadRoutes');
 const builderRoutes = require('./routes/builderRoutes');
+
+// Import cleanup utilities
+const cleanupUtils = require('./utils/cleanupUtils');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -43,6 +47,21 @@ console.log('Setting up temp directories:');
     console.log(`Directory exists: ${dir}`);
   }
 });
+
+// Run initial cleanup of any old temp files (from previous deployments)
+console.log('Running initial cleanup of temporary directories');
+cleanupUtils.cleanupOldTempFiles(UPLOADS_DIR, 12); // Delete files older than 12 hours
+cleanupUtils.cleanupOldTempFiles(EXTRACTED_DIR, 12);
+cleanupUtils.cleanupOldTempFiles(STRUCTURES_DIR, 12);
+
+// Set up periodic cleanup every hour
+const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+setInterval(() => {
+  console.log('Running scheduled temp directory cleanup');
+  cleanupUtils.cleanupOldTempFiles(UPLOADS_DIR, 1); // Delete files older than 1 hour
+  cleanupUtils.cleanupOldTempFiles(EXTRACTED_DIR, 1);
+  cleanupUtils.cleanupOldTempFiles(STRUCTURES_DIR, 1);
+}, CLEANUP_INTERVAL_MS);
 
 if (!process.env.GITHUB_TOKEN) {
   console.warn(
