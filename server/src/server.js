@@ -1,10 +1,10 @@
-// Modified server.js with explicit .env path configuration
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const morgan = require('morgan');
 const dotenv = require('dotenv');
 const fs = require('fs');
+const os = require('os');
 
 // Load environment variables with explicit path
 const envPath = path.resolve(__dirname, '.env');
@@ -17,6 +17,32 @@ const builderRoutes = require('./routes/builderRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
+
+// Set up the temp directories - using OS temp directory for cloud compatibility
+// This is critical for platforms like Render where you need to use a writable directory
+const BASE_TEMP_DIR = process.env.RENDER
+  ? path.join(os.tmpdir(), 'project-tree-generator')
+  : path.join(__dirname, 'tmp');
+const UPLOADS_DIR = path.join(BASE_TEMP_DIR, 'uploads');
+const EXTRACTED_DIR = path.join(BASE_TEMP_DIR, 'extracted');
+const STRUCTURES_DIR = path.join(BASE_TEMP_DIR, 'structures');
+
+// Override env vars with the new paths
+process.env.TEMP_DIR = BASE_TEMP_DIR;
+process.env.UPLOADS_DIR = UPLOADS_DIR;
+process.env.EXTRACTED_DIR = EXTRACTED_DIR;
+process.env.STRUCTURES_DIR = STRUCTURES_DIR;
+
+// Create required directories
+console.log('Setting up temp directories:');
+[BASE_TEMP_DIR, UPLOADS_DIR, EXTRACTED_DIR, STRUCTURES_DIR].forEach((dir) => {
+  if (!fs.existsSync(dir)) {
+    console.log(`Creating directory: ${dir}`);
+    fs.mkdirSync(dir, { recursive: true });
+  } else {
+    console.log(`Directory exists: ${dir}`);
+  }
+});
 
 if (!process.env.GITHUB_TOKEN) {
   console.warn(
@@ -36,22 +62,6 @@ app.use(morgan('dev'));
 app.use('/api/github', githubRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/builder', builderRoutes);
-
-// Create required directories if they don't exist
-const requiredDirs = [
-  process.env.TEMP_DIR || './tmp',
-  process.env.UPLOADS_DIR || './tmp/uploads',
-  process.env.EXTRACTED_DIR || './tmp/extracted',
-  process.env.STRUCTURES_DIR || './tmp/structures',
-];
-
-requiredDirs.forEach((dir) => {
-  const dirPath = path.resolve(__dirname, dir);
-  if (!fs.existsSync(dirPath)) {
-    console.log(`Creating directory: ${dir}`);
-    fs.mkdirSync(dirPath, { recursive: true });
-  }
-});
 
 // Serve static files in production
 if (process.env.NODE_ENV === 'production') {
@@ -74,6 +84,7 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  console.log(`Temp directory: ${BASE_TEMP_DIR}`);
 });
 
 module.exports = app;

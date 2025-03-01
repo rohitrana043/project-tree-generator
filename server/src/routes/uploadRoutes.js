@@ -2,20 +2,26 @@ const express = require('express');
 const router = express.Router();
 const uploadController = require('../controllers/uploadController');
 const multer = require('multer');
+const path = require('path');
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    cb(null, './tmp/uploads');
+    // Use environment variable for uploads directory
+    cb(null, process.env.UPLOADS_DIR);
   },
   filename: function (req, file, cb) {
     cb(null, Date.now() + '-' + file.originalname);
   },
 });
 
+// Get max upload size from environment variables
+const MAX_UPLOAD_SIZE =
+  parseInt(process.env.MAX_UPLOAD_SIZE) || 10 * 1024 * 1024; // 10MB default
+
 const upload = multer({
   storage: storage,
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: MAX_UPLOAD_SIZE },
   fileFilter: function (req, file, cb) {
     // Accept only zip files
     if (
