@@ -1,11 +1,20 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaGithub, FaFolderOpen, FaFileCode } from 'react-icons/fa';
+import SEO from '../components/common/SEO';
 import './LandingPage.css';
 
 const LandingPage = () => {
   return (
     <div className="landing-container">
+      <SEO
+        title="Generate Project Trees & Build Project Structures"
+        description="Free tool to generate project tree structures from GitHub repositories or uploads, and create empty project structures from tree files. Simplify your development workflow."
+        keywords="project tree generator, directory structure, code visualization, github repository structure, folder hierarchy, project skeleton"
+        canonical="/"
+        ogType="website"
+      />
+
       <h1>Project Tree Generator & Structure Builder</h1>
       <p className="description">
         Generate project tree structures from GitHub repositories or folder
@@ -62,6 +71,24 @@ const LandingPage = () => {
           </div>
         </div>
       </div>
+
+      {/* Schema.org structured data */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'SoftwareApplication',
+          name: 'Project Tree Generator',
+          applicationCategory: 'DeveloperApplication',
+          operatingSystem: 'Web',
+          offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'USD',
+          },
+          description:
+            'Generate project tree structures from GitHub repositories or folder uploads, and create empty project structures from tree files.',
+        })}
+      </script>
     </div>
   );
 };

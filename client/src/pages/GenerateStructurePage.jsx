@@ -1,4 +1,4 @@
-// pages/GenerateStructurePage.jsx - Updated with markdown support
+// pages/GenerateStructurePage.jsx - Updated with SEO and accessibility improvements
 import { Editor } from '@monaco-editor/react';
 import React, { useRef, useState } from 'react';
 import {
@@ -8,6 +8,7 @@ import {
   FaInfoCircle,
   FaUpload,
 } from 'react-icons/fa';
+import SEO from '../components/common/SEO';
 import AlertMessage from '../components/common/AlertMessage';
 import LoadingSpinner from '../components/common/LoadingSpinner';
 import { builderApi } from '../utils/api';
@@ -196,6 +197,13 @@ const GenerateStructurePage = () => {
 
   return (
     <div className="generate-structure-container">
+      <SEO
+        title="Build Empty Project Structures"
+        description="Create empty project structures from tree files. Generate folder structures for new projects quickly based on a predefined tree structure."
+        keywords="project scaffolding, folder structure generator, project structure builder, code skeleton generator, empty project template"
+        canonical="/generate-structure"
+      />
+
       <h1>Generate Empty Project Structure</h1>
 
       {notification && (
@@ -216,6 +224,8 @@ const GenerateStructurePage = () => {
             value={projectName}
             onChange={(e) => setProjectName(e.target.value)}
             required
+            aria-required="true"
+            aria-invalid={!projectName.trim()}
           />
         </div>
 
@@ -228,6 +238,7 @@ const GenerateStructurePage = () => {
               accept=".txt,.md"
               onChange={handleFileUpload}
               style={{ display: 'none' }}
+              aria-label="Upload tree structure file"
             />
           </label>
 
@@ -235,24 +246,33 @@ const GenerateStructurePage = () => {
             className="btn-primary"
             onClick={handleGenerateStructure}
             disabled={loading || !treeText.trim() || !projectName.trim()}
+            aria-disabled={loading || !treeText.trim() || !projectName.trim()}
           >
             <FaDownload />
             Generate & Download
           </button>
         </div>
 
-        {error && <div className="error-message">{error}</div>}
+        {error && (
+          <div className="error-message" aria-live="assertive">
+            {error}
+          </div>
+        )}
 
         {validation && (
           <div
             className={`validation-result ${
               validation.valid ? 'valid' : 'invalid'
             }`}
+            aria-live="polite"
           >
             {validation.valid ? (
-              <FaCheckCircle className="icon-success" />
+              <FaCheckCircle className="icon-success" aria-hidden="true" />
             ) : (
-              <FaExclamationTriangle className="icon-warning" />
+              <FaExclamationTriangle
+                className="icon-warning"
+                aria-hidden="true"
+              />
             )}
             <span>{validation.message}</span>
           </div>
@@ -265,7 +285,7 @@ const GenerateStructurePage = () => {
         <div className="editor-container">
           <h2>Tree Structure</h2>
           <div className="markdown-note">
-            <FaInfoCircle />
+            <FaInfoCircle aria-hidden="true" />
             <span>
               You can paste tree structures from markdown documents. Comments
               (lines starting with #) and code blocks (```) will be
@@ -275,8 +295,10 @@ const GenerateStructurePage = () => {
 
           <div className="editor-wrapper">
             {getCurrentFolder() && (
-              <div className="current-folder">
-                <span className="folder-icon">📁</span>
+              <div className="current-folder" aria-live="polite">
+                <span className="folder-icon" aria-hidden="true">
+                  📁
+                </span>
                 {getCurrentFolder()}
               </div>
             )}
@@ -296,6 +318,7 @@ const GenerateStructurePage = () => {
                 rulers: [],
                 folding: true,
               }}
+              aria-label="Tree structure editor"
             />
           </div>
 
@@ -319,6 +342,54 @@ The tree can be enclosed in code blocks and include comments.`}
           </div>
         </div>
       )}
+
+      {/* FAQ section for SEO */}
+      <div className="faq-section">
+        <h2>Frequently Asked Questions</h2>
+        <div className="faq-item">
+          <h3>What can I do with the project structure generator?</h3>
+          <p>
+            You can create an empty project structure with folders and files
+            based on a tree diagram you provide. This is useful for quickly
+            setting up new projects with a predefined folder structure.
+          </p>
+        </div>
+        <div className="faq-item">
+          <h3>How do I format the tree structure correctly?</h3>
+          <p>
+            Your tree structure should start with a root folder name followed by
+            a slash (e.g., "my-project/"). Subfolders should be indented and
+            preceded by connectors like "├─" or "└─". Files should not have a
+            trailing slash.
+          </p>
+        </div>
+        <div className="faq-item">
+          <h3>Can I import tree structures from other tools?</h3>
+          <p>
+            Yes, you can paste tree structures from markdown documents or other
+            sources. The tool will automatically handle code blocks and
+            comments.
+          </p>
+        </div>
+      </div>
+
+      {/* Schema.org structured data */}
+      <script type="application/ld+json">
+        {JSON.stringify({
+          '@context': 'https://schema.org',
+          '@type': 'WebApplication',
+          name: 'Project Structure Generator',
+          applicationCategory: 'DeveloperApplication',
+          operatingSystem: 'Web',
+          offers: {
+            '@type': 'Offer',
+            price: '0',
+            priceCurrency: 'USD',
+          },
+          description:
+            'Create empty project structures from tree files. Generate folder structures for new projects.',
+        })}
+      </script>
     </div>
   );
 };
