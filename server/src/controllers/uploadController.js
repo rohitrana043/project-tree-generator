@@ -1,4 +1,4 @@
-// controllers/uploadController.js - Improved file upload controller with better cleanup
+// controllers/uploadController.js - Modified for serverless compatibility
 const fs = require('fs');
 const path = require('path');
 const AdmZip = require('adm-zip');
@@ -42,7 +42,8 @@ exports.generateTree = async (req, res, next) => {
     // Create a unique extraction directory
     const timestamp = Date.now();
     extractPath = path.resolve(
-      process.env.EXTRACTED_DIR || path.join(__dirname, '../tmp/extracted'),
+      process.env.EXTRACTED_DIR ||
+        path.join(require('os').tmpdir(), 'extracted'),
       timestamp.toString()
     );
 
@@ -81,13 +82,15 @@ exports.generateTree = async (req, res, next) => {
       fileName,
     });
 
-    // Clean up temporary files after response has been sent
-    // This ensures the response is not delayed by cleanup operations
-    process.nextTick(() => {
-      console.log('Performing cleanup after response sent');
-      cleanupUtils.safeDeleteFile(filePath);
-      cleanupUtils.safeDeleteDirectory(extractPath);
-    });
+    // In serverless environments, rely on ephemeral nature of function
+    // For non-serverless, clean up explicitly
+    if (process.env.VERCEL !== 'true' && process.env.RENDER !== 'true') {
+      process.nextTick(() => {
+        console.log('Performing cleanup after response sent');
+        cleanupUtils.safeDeleteFile(filePath);
+        cleanupUtils.safeDeleteDirectory(extractPath);
+      });
+    }
   } catch (error) {
     console.error('Error in generateTree:', error);
 

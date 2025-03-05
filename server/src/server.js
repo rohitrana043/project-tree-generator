@@ -1,4 +1,4 @@
-// Modified server.js with temp directory handling and periodic cleanup
+// Modified server.js with Vercel support and temp directory handling
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -7,9 +7,14 @@ const dotenv = require('dotenv');
 const fs = require('fs');
 const os = require('os');
 
-// Load environment variables with explicit path
-const envPath = path.resolve(__dirname, '.env');
-const result = dotenv.config({ path: envPath });
+// Load environment variables
+let result;
+try {
+  const envPath = path.resolve(__dirname, '.env');
+  result = dotenv.config({ path: envPath });
+} catch (error) {
+  console.log('Error loading .env file, using environment variables');
+}
 
 // Import routes
 const githubRoutes = require('./routes/githubRoutes');
@@ -22,9 +27,15 @@ const cleanupUtils = require('./utils/cleanupUtils');
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Check if running on Vercel, Render, or local environment
+const isVercel = process.env.VERCEL === 'true';
+const isRender = process.env.RENDER === 'true';
+const isServerless = isVercel || isRender;
+console.log(`Environment: Vercel: ${isVercel}, Render: ${isRender}`);
+
 // Set up the temp directories - using OS temp directory for cloud compatibility
-// This is critical for platforms like Render where you need to use a writable directory
-const BASE_TEMP_DIR = process.env.RENDER
+// This is critical for serverless platforms where the filesystem is read-only
+const BASE_TEMP_DIR = isServerless
   ? path.join(os.tmpdir(), 'project-tree-generator')
   : path.join(__dirname, 'tmp');
 const UPLOADS_DIR = path.join(BASE_TEMP_DIR, 'uploads');
@@ -48,20 +59,23 @@ console.log('Setting up temp directories:');
   }
 });
 
-// Run initial cleanup of any old temp files (from previous deployments)
+// Run initial cleanup of any old temp files
 console.log('Running initial cleanup of temporary directories');
 cleanupUtils.cleanupOldTempFiles(UPLOADS_DIR, 12); // Delete files older than 12 hours
 cleanupUtils.cleanupOldTempFiles(EXTRACTED_DIR, 12);
 cleanupUtils.cleanupOldTempFiles(STRUCTURES_DIR, 12);
 
-// Set up periodic cleanup every hour
-const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
-setInterval(() => {
-  console.log('Running scheduled temp directory cleanup');
-  cleanupUtils.cleanupOldTempFiles(UPLOADS_DIR, 1); // Delete files older than 1 hour
-  cleanupUtils.cleanupOldTempFiles(EXTRACTED_DIR, 1);
-  cleanupUtils.cleanupOldTempFiles(STRUCTURES_DIR, 1);
-}, CLEANUP_INTERVAL_MS);
+// Set up periodic cleanup if not in serverless environment
+// In serverless environments, functions don't persist long enough for this to matter
+if (!isServerless) {
+  const CLEANUP_INTERVAL_MS = 60 * 60 * 1000; // 1 hour
+  setInterval(() => {
+    console.log('Running scheduled temp directory cleanup');
+    cleanupUtils.cleanupOldTempFiles(UPLOADS_DIR, 1);
+    cleanupUtils.cleanupOldTempFiles(EXTRACTED_DIR, 1);
+    cleanupUtils.cleanupOldTempFiles(STRUCTURES_DIR, 1);
+  }, CLEANUP_INTERVAL_MS);
+}
 
 if (!process.env.GITHUB_TOKEN) {
   console.warn(
@@ -73,17 +87,38 @@ if (!process.env.GITHUB_TOKEN) {
 
 // Middleware
 app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(morgan('dev'));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// API Routes
+// Only use morgan in development
+if (process.env.NODE_ENV !== 'production') {
+  app.use(morgan('dev'));
+}
+
+// API Routes - Add /api prefix for all routes
 app.use('/api/github', githubRoutes);
 app.use('/api/upload', uploadRoutes);
 app.use('/api/builder', builderRoutes);
 
+// Basic health check route
+app.get('/health', (req, res) => {
+  res.status(200).json({
+    status: 'ok',
+    environment: isVercel ? 'vercel' : isRender ? 'render' : 'standard',
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Handle root path to prevent 404
+app.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'Project Tree Generator API is running',
+    docs: 'Use /api endpoints to access the API functionality',
+  });
+});
+
 // Serve static files in production
-if (process.env.NODE_ENV === 'production') {
+if (process.env.NODE_ENV === 'production' && !isServerless) {
   app.use(express.static(path.join(__dirname, '../client/build')));
 
   app.get('*', (req, res) => {
@@ -100,10 +135,14 @@ app.use((err, req, res, next) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log(`Temp directory: ${BASE_TEMP_DIR}`);
-});
+// For local development and non-serverless environments
+if (!isVercel) {
+  app.listen(PORT, () => {
+    console.log(`Server running on port ${PORT}`);
+    console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`Temp directory: ${BASE_TEMP_DIR}`);
+  });
+}
 
+// Export for serverless environments
 module.exports = app;

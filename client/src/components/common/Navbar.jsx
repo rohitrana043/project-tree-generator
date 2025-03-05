@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, NavLink } from 'react-router-dom';
 import { FaCode, FaGithub } from 'react-icons/fa';
+import { TbWorldWww } from 'react-icons/tb';
 import './Navbar.css';
 
 const Navbar = () => {
@@ -52,6 +53,16 @@ const Navbar = () => {
               rel="noopener noreferrer"
             >
               <FaGithub />
+            </a>
+          </li>
+          <li className="navbar-item">
+            <a
+              href="https://rohitrana.dev"
+              className="navbar-link"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <TbWorldWww />
             </a>
           </li>
         </ul>

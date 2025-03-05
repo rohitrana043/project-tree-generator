@@ -3,15 +3,31 @@ const router = express.Router();
 const uploadController = require('../controllers/uploadController');
 const multer = require('multer');
 const path = require('path');
+const os = require('os');
+
+// Determine uploads directory based on environment
+const isServerless =
+  process.env.VERCEL === 'true' || process.env.RENDER === 'true';
+const BASE_UPLOADS_DIR = isServerless
+  ? path.join(os.tmpdir(), 'project-tree-generator', 'uploads')
+  : process.env.UPLOADS_DIR;
+
+// Ensure directory exists
+const fs = require('fs');
+if (!fs.existsSync(BASE_UPLOADS_DIR)) {
+  fs.mkdirSync(BASE_UPLOADS_DIR, { recursive: true });
+}
 
 // Configure multer for file uploads
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
-    // Use environment variable for uploads directory
-    cb(null, process.env.UPLOADS_DIR);
+    cb(null, BASE_UPLOADS_DIR);
   },
   filename: function (req, file, cb) {
-    cb(null, Date.now() + '-' + file.originalname);
+    cb(
+      null,
+      Date.now() + '-' + file.originalname.replace(/[^a-zA-Z0-9.-]/g, '_')
+    );
   },
 });
 

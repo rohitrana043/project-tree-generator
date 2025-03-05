@@ -2,11 +2,12 @@
   "name": "project-tree-generator-server",
   "version": "1.0.0",
   "description": "Backend for project tree generator",
-  "main": "server.js",
+  "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "setup": "node src/setup.js"
+    "setup": "node src/setup.js",
+    "build": "node src/setup.js"
   },
   "dependencies": {
     "@octokit/rest": "^19.0.13",
@@ -20,5 +21,8 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "engines": {
+    "node": ">=14.x"
   }
 }
