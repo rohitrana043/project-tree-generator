@@ -49,7 +49,7 @@ const generateSitemap = () => {
 // Write sitemap to file
 const writeSitemap = () => {
   const sitemap = generateSitemap();
-  const publicDir = path.resolve(__dirname, 'public');
+  const publicDir = path.resolve(__dirname, '../public');
 
   if (!fs.existsSync(publicDir)) {
     fs.mkdirSync(publicDir, { recursive: true });
