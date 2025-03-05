@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { FaHome, FaSearch } from 'react-icons/fa';
-import SEO from '../components/common/SEO';
+import SEO from './SEO';
 import './NotFoundPage.css';
 
 const NotFoundPage = () => {
