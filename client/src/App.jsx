@@ -4,7 +4,7 @@ import { HelmetProvider } from 'react-helmet-async';
 import LandingPage from './pages/LandingPage';
 import GenerateTreePage from './pages/GenerateTreePage';
 import GenerateStructurePage from './pages/GenerateStructurePage';
-import NotFoundPage from './pages/NotFoundPage';
+import NotFoundPage from './components/common/NotFoundPage';
 import Navbar from './components/common/Navbar';
 import Footer from './components/common/Footer';
 import './App.css';
