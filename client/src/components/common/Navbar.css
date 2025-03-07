@@ -2,6 +2,9 @@
   background-color: var(--secondary-color);
   padding: 1rem 2rem;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+  position: sticky;
+  top: 0;
+  z-index: 999;
 }
 
 .navbar-container {
@@ -27,6 +30,8 @@
 .navbar-menu {
   display: flex;
   list-style: none;
+  margin: 0;
+  padding: 0;
 }
 
 .navbar-item {
@@ -41,7 +46,75 @@
   transition: all 0.3s ease;
 }
 
-.navbar-link:hover {
+.navbar-link:hover,
+.navbar-link.active {
   background-color: rgba(255, 255, 255, 0.1);
   text-decoration: none;
+}
+
+/* Mobile menu icon */
+.menu-icon {
+  display: none;
+  color: white;
+  font-size: 1.8rem;
+  cursor: pointer;
+}
+
+/* Media Queries for responsive design */
+@media screen and (max-width: 768px) {
+  .navbar {
+    padding: 1rem;
+  }
+
+  .menu-icon {
+    display: block;
+    margin-left: auto;
+  }
+
+  .navbar-menu {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    position: absolute;
+    top: 100%;
+    left: -100%;
+    opacity: 0;
+    transition: all 0.4s ease;
+    background-color: var(--secondary-color);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    padding: 1rem 0;
+    z-index: 1;
+  }
+
+  .navbar-menu.active {
+    left: 0;
+    opacity: 1;
+  }
+
+  .navbar-item {
+    margin: 0.5rem 0;
+    width: 100%;
+    text-align: center;
+    padding: 0 1rem;
+  }
+
+  .navbar-link {
+    width: 100%;
+    display: block;
+    padding: 0.75rem;
+  }
+}
+
+/* Additional media query for very small screens */
+@media screen and (max-width: 480px) {
+  .navbar-logo {
+    font-size: 1.2rem;
+  }
+
+  .navbar-logo span {
+    max-width: 180px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
 }

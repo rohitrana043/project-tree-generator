@@ -251,6 +251,41 @@ a:hover {
   overflow-x: auto;
 }
 
+img,
+video,
+canvas,
+svg {
+  max-width: 100%;
+  height: auto;
+}
+
+pre,
+code {
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  max-width: 100%;
+}
+
+table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+input,
+select,
+textarea,
+button {
+  max-width: 100%;
+}
+
+.app-container {
+  overflow: hidden;
+  position: relative;
+}
+
 /* Responsive Styles */
 @media (max-width: 768px) {
   .feature-cards {
@@ -278,5 +313,24 @@ a:hover {
 
   .upload-btn {
     margin-bottom: 1rem;
+  }
+}
+
+@media screen and (max-width: 480px) {
+  .main-content {
+    padding: 1rem;
+  }
+
+  .card,
+  .github-form-container,
+  .file-uploader-container {
+    padding: 0.75rem;
+  }
+}
+
+/* Remove fixed widths on small screens */
+@media screen and (max-width: 576px) {
+  [style*='width'] {
+    max-width: 100% !important;
   }
 }

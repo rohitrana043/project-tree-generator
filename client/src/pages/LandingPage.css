@@ -1,7 +1,7 @@
 .landing-container {
   max-width: 1000px;
   margin: 0 auto;
-  padding: 2rem 0;
+  padding: 2rem 1rem;
 }
 
 .landing-container h1 {
@@ -21,6 +21,7 @@
   display: flex;
   justify-content: space-between;
   margin-bottom: 3rem;
+  gap: 2rem;
 }
 
 .feature-card {
@@ -97,4 +98,71 @@
 .step p {
   text-align: center;
   color: var(--text-light);
+}
+
+/* Responsive Styles */
+@media screen and (max-width: 992px) {
+  .landing-container h1 {
+    font-size: 2rem;
+  }
+
+  .description {
+    font-size: 1.1rem;
+  }
+
+  .feature-card {
+    padding: 1.5rem;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .feature-cards {
+    flex-direction: column;
+    gap: 1.5rem;
+  }
+
+  .feature-card {
+    width: 100%;
+  }
+
+  .steps {
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+
+  .step {
+    width: 45%;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .landing-container {
+    padding: 1.5rem 1rem;
+  }
+
+  .landing-container h1 {
+    font-size: 1.8rem;
+  }
+
+  .description {
+    font-size: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .how-it-works {
+    margin-top: 2rem;
+  }
+
+  .steps {
+    flex-direction: column;
+  }
+
+  .step {
+    width: 100%;
+    margin-bottom: 2rem;
+  }
+
+  .step:last-child {
+    margin-bottom: 0;
+  }
 }

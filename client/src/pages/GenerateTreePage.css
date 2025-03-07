@@ -15,6 +15,8 @@
 .react-tabs__tab-list {
   border-bottom: 1px solid var(--border-color);
   margin-bottom: 2rem;
+  display: flex;
+  flex-wrap: wrap;
 }
 
 .react-tabs__tab {
@@ -45,4 +47,74 @@
 
 .result-section h2 {
   margin-bottom: 1rem;
+}
+
+/* FAQ section */
+.faq-section {
+  margin-top: 3rem;
+}
+
+.faq-item {
+  margin-bottom: 1.5rem;
+}
+
+.faq-item h3 {
+  margin-bottom: 0.5rem;
+  font-size: 1.1rem;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 992px) {
+  .generate-tree-container {
+    max-width: 100%;
+  }
+}
+
+@media screen and (max-width: 768px) {
+  .generate-tree-container {
+    padding: 1.5rem;
+  }
+
+  .generate-tree-container h1 {
+    font-size: 1.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .react-tabs__tab {
+    padding: 0.6rem 1.2rem;
+    font-size: 0.9rem;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .generate-tree-container {
+    padding: 1rem;
+    border-radius: 0;
+    box-shadow: none;
+    background-color: transparent;
+  }
+
+  .generate-tree-container h1 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .react-tabs__tab-list {
+    margin-bottom: 1.5rem;
+  }
+
+  .react-tabs__tab {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+    margin-right: 0.25rem;
+    margin-bottom: 0.25rem;
+  }
+
+  .faq-section {
+    margin-top: 2rem;
+  }
+
+  .faq-item h3 {
+    font-size: 1rem;
+  }
 }

@@ -1,19 +1,33 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
-import { FaCode, FaGithub } from 'react-icons/fa';
+import { FaCode, FaGithub, FaBars, FaTimes } from 'react-icons/fa';
 import { TbWorldWww } from 'react-icons/tb';
 import './Navbar.css';
 
 const Navbar = () => {
+  const [isOpen, setIsOpen] = useState(false);
+
+  const toggleMenu = () => {
+    setIsOpen(!isOpen);
+  };
+
+  const closeMenu = () => {
+    setIsOpen(false);
+  };
+
   return (
     <nav className="navbar">
       <div className="navbar-container">
-        <Link to="/" className="navbar-logo">
+        <Link to="/" className="navbar-logo" onClick={closeMenu}>
           <FaCode />
           <span>Project Tree Generator</span>
         </Link>
 
-        <ul className="navbar-menu">
+        <div className="menu-icon" onClick={toggleMenu}>
+          {isOpen ? <FaTimes /> : <FaBars />}
+        </div>
+
+        <ul className={isOpen ? 'navbar-menu active' : 'navbar-menu'}>
           <li className="navbar-item">
             <NavLink
               to="/"
@@ -21,6 +35,7 @@ const Navbar = () => {
                 isActive ? 'navbar-link active' : 'navbar-link'
               }
               end
+              onClick={closeMenu}
             >
               Home
             </NavLink>
@@ -31,6 +46,7 @@ const Navbar = () => {
               className={({ isActive }) =>
                 isActive ? 'navbar-link active' : 'navbar-link'
               }
+              onClick={closeMenu}
             >
               Generate Tree
             </NavLink>
@@ -41,6 +57,7 @@ const Navbar = () => {
               className={({ isActive }) =>
                 isActive ? 'navbar-link active' : 'navbar-link'
               }
+              onClick={closeMenu}
             >
               Build Structure
             </NavLink>
@@ -51,6 +68,7 @@ const Navbar = () => {
               className="navbar-link"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={closeMenu}
             >
               <FaGithub />
             </a>
@@ -61,6 +79,7 @@ const Navbar = () => {
               className="navbar-link"
               target="_blank"
               rel="noopener noreferrer"
+              onClick={closeMenu}
             >
               <TbWorldWww />
             </a>

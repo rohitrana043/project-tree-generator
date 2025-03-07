@@ -44,4 +44,38 @@
   font-family: 'Courier New', monospace;
   white-space: pre-wrap;
   line-height: 1.4;
+  font-size: 14px;
+}
+
+/* Responsive styles */
+@media screen and (max-width: 768px) {
+  .tree-content {
+    max-height: 400px;
+    padding: 0.75rem;
+  }
+
+  .tree-content pre {
+    font-size: 13px;
+  }
+}
+
+@media screen and (max-width: 576px) {
+  .tree-preview-actions {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .action-btn {
+    margin: 0.25rem;
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8rem;
+  }
+
+  .tree-content {
+    max-height: 350px;
+  }
+
+  .tree-content pre {
+    font-size: 12px;
+  }
 }
