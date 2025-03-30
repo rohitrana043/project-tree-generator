@@ -28,7 +28,7 @@ export const cleanTreeText = (treeText) => {
 };
 
 /**
- * Validate tree structure
+ * Enhanced validation for tree structure with better format recognition
  * @param {string} treeText - Tree structure text
  * @returns {object} Validation result with isValid and errors
  */
@@ -58,62 +58,62 @@ export const validateTreeStructure = (treeText) => {
     errors.push('First line must be a root folder ending with "/"');
   }
 
-  // More flexible regex to handle various connector symbols
-  const indentPattern =
-    /^(?:[│|][\s]*)*(?:├[─\-]+|└[─\-]+|--|\|-|`-|\+\|──|\|─+|[│|])[\s]*([^/\n]+)(\/)?\s*$/;
+  // Enhanced pattern matching for standard tree formats
   const rootPattern = /^([^/]+)\/\s*$/;
+  const standardEntryPattern =
+    /^(?:(?:│|┃|┆|┇|┊|┋|\|)\s*)*(?:├──|└──|├─|└─)\s+([^/\n]+)(\/)?\s*$/;
+  const simplifiedEntryPattern =
+    /^[\s│|]*(?:[-─]|\|—+|├─+|└─+)\s+([^/\n]+)(\/)?\s*$/;
+  const fallbackEntryPattern = /^[\s│|]*([^│├└─\s][^/\n]+)(\/)?\s*$/;
 
   if (!rootPattern.test(lines[0].trim())) {
     errors.push('Root directory must be in the format "folder-name/"');
   }
 
-  let previousLevel = 0;
-  let hasMismatchedIndentation = false;
+  // Initialize tracking variables
+  let previousIndentLevel = 0;
+  const levels = [0]; // Track indentation levels in a stack
 
+  // Skip first line (root) and check remaining lines
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i].trim();
     if (!line) continue;
 
-    // Check line format with more flexible matching
-    if (!indentPattern.test(line)) {
+    // Try to match against the patterns in order of preference
+    let match =
+      line.match(standardEntryPattern) ||
+      line.match(simplifiedEntryPattern) ||
+      line.match(fallbackEntryPattern);
+
+    if (!match) {
       errors.push(`Line ${i + 1} has invalid format`);
       continue;
     }
 
-    // Calculate indentation level
-    let depth = 0;
-    let j = 0;
+    // Calculate indentation level - more reliable method
+    let indentLevel = 0;
+    const lineNoTrim = lines[i];
 
-    // Count vertical lines and spaces for depth
-    while (
-      j < line.length &&
-      (line[j] === ' ' || line[j] === '│' || line[j] === '|')
-    ) {
-      if (line[j] === '│' || line[j] === '|') {
-        depth++;
-      }
-      j++;
+    // Count leading connectors/spaces to determine indent level
+    // More reliable method: count vertical lines and spaces in groups of 4
+    const leadingContent = lineNoTrim.substring(
+      0,
+      lineNoTrim.indexOf(match[1])
+    );
+    indentLevel = Math.floor(leadingContent.length / 4);
+
+    // Verify indentation consistency
+    if (indentLevel > previousIndentLevel + 1) {
+      errors.push(
+        `Line ${i + 1} has too deep indentation, expected at most ${
+          previousIndentLevel + 1
+        } levels but got ${indentLevel}`
+      );
     }
 
-    // Additional depth for connectors
-    if (
-      line.includes('├') ||
-      line.includes('└') ||
-      line.includes('─') ||
-      line.includes('-') ||
-      line.includes('+|──') ||
-      line.includes('|─')
-    ) {
-      depth++;
-    }
-
-    // Check that levels don't increase by more than 1
-    if (depth > previousLevel + 1 && !hasMismatchedIndentation) {
-      errors.push(`Line ${i + 1} has inconsistent indentation`);
-      hasMismatchedIndentation = true; // Only report this once
-    }
-
-    previousLevel = depth;
+    // Update for next iteration
+    levels.push(indentLevel);
+    previousIndentLevel = indentLevel;
   }
 
   return {
@@ -123,7 +123,7 @@ export const validateTreeStructure = (treeText) => {
 };
 
 /**
- * Normalize tree structure
+ * Normalize tree structure to a consistent format
  * @param {string} treeText - Tree structure text
  * @returns {string} Normalized tree structure
  */
@@ -133,7 +133,7 @@ export const normalizeTreeStructure = (treeText) => {
 
   // Split into lines and filter empty lines
   const lines = cleanedText.split('\n').filter((line) => line.trim());
-  let normalized = [];
+  const normalized = [];
 
   // Process first line (root)
   const rootMatch = lines[0].match(/^([^/]+).*$/);
@@ -143,27 +143,75 @@ export const normalizeTreeStructure = (treeText) => {
     normalized.push(lines[0]);
   }
 
+  // Determine the current indentation pattern to consistently normalize
+  let previousLevel = 0;
+  const levelMap = {}; // Maps original level to normalized level
+
   // Process rest of the lines
   for (let i = 1; i < lines.length; i++) {
-    let line = lines[i];
+    const line = lines[i];
 
-    // Remove any extra whitespace or characters
-    line = line.replace(/\s+$/, '');
+    // Calculate indentation level
+    const leadingSpaces = line.match(/^(\s*)/)[1].length;
+    const originalLevel = Math.floor(leadingSpaces / 2); // Original indentation unit
 
-    // Normalize different connector variations
-    line = line.replace(/--/g, '─ ');
-    line = line.replace(/\|-/g, '├─ ');
-    line = line.replace(/`-/g, '└─ ');
-    line = line.replace(/\+\|──/g, '├─ ');
-    line = line.replace(/\|─+/g, '├─ ');
+    // Map to normalized level
+    if (!(originalLevel in levelMap)) {
+      if (Object.keys(levelMap).length === 0) {
+        levelMap[originalLevel] = 1; // First indentation level
+      } else {
+        // Find closest existing level
+        const existingLevels = Object.keys(levelMap)
+          .map(Number)
+          .sort((a, b) => a - b);
+        const closestLevel = existingLevels.reduce((prev, curr) => {
+          return Math.abs(curr - originalLevel) < Math.abs(prev - originalLevel)
+            ? curr
+            : prev;
+        }, existingLevels[0]);
 
-    // Replace multiple different dash/line characters with standard box-drawing
-    line = line.replace(/[├└][-─\s]+/g, (match) => {
-      const firstChar = match[0];
-      return firstChar + '─ ';
-    });
+        if (originalLevel > closestLevel) {
+          levelMap[originalLevel] = levelMap[closestLevel] + 1;
+        } else {
+          levelMap[originalLevel] = Math.max(1, levelMap[closestLevel] - 1);
+        }
+      }
+    }
 
-    normalized.push(line);
+    const normalizedLevel = levelMap[originalLevel];
+
+    // Extract name and check if directory
+    let name = line
+      .trim()
+      .replace(/^[│├└─\|\s]+/, '')
+      .trim();
+    const isDirectory = name.endsWith('/');
+
+    if (isDirectory) {
+      name = name.slice(0, -1); // Remove trailing slash
+    }
+
+    // Skip empty names
+    if (!name) continue;
+
+    // Generate normalized line
+    let normalizedLine = '';
+    for (let j = 0; j < normalizedLevel; j++) {
+      if (j < normalizedLevel - 1) {
+        normalizedLine += '│   ';
+      } else {
+        const isLast =
+          i === lines.length - 1 ||
+          Math.floor(lines[i + 1].match(/^(\s*)/)[1].length / 2) <=
+            originalLevel;
+        normalizedLine += isLast ? '└── ' : '├── ';
+      }
+    }
+
+    normalizedLine += name + (isDirectory ? '/' : '');
+    normalized.push(normalizedLine);
+
+    previousLevel = originalLevel;
   }
 
   return normalized.join('\n');

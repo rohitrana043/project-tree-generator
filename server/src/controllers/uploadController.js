@@ -11,19 +11,10 @@ exports.generateTree = async (req, res, next) => {
   let extractPath = null;
 
   try {
-    console.log('Upload request received');
-
     if (!req.file) {
       console.error('No file uploaded');
       return res.status(400).json({ message: 'No file uploaded' });
     }
-
-    console.log('File details:', {
-      originalName: req.file.originalname,
-      mimetype: req.file.mimetype,
-      path: req.file.path,
-      size: req.file.size,
-    });
 
     filePath = req.file.path;
     const fileName = path.parse(req.file.originalname).name;
@@ -37,8 +28,6 @@ exports.generateTree = async (req, res, next) => {
       });
     }
 
-    console.log(`File verified at: ${filePath}`);
-
     // Create a unique extraction directory
     const timestamp = Date.now();
     extractPath = path.resolve(
@@ -48,15 +37,12 @@ exports.generateTree = async (req, res, next) => {
     );
 
     // Ensure extract directory exists
-    console.log(`Creating extraction directory: ${extractPath}`);
     fs.mkdirSync(extractPath, { recursive: true });
 
     // Extract zip file to temporary directory
     try {
-      console.log(`Extracting zip file to: ${extractPath}`);
       const zip = new AdmZip(filePath);
       zip.extractAllTo(extractPath, true);
-      console.log('Zip file extracted successfully');
     } catch (extractError) {
       console.error('Error extracting zip file:', extractError);
       // Clean up the uploaded file since we're returning an error
@@ -67,14 +53,10 @@ exports.generateTree = async (req, res, next) => {
         error: extractError.message,
       });
     }
-
-    // Generate tree structure
-    console.log('Generating tree structure from extracted files');
     const treeText = treeGenerator.generateTreeFromDirectory(
       extractPath,
       fileName
     );
-    console.log('Tree structure generated successfully');
 
     // Send response with tree structure first
     res.status(200).json({

@@ -1,4 +1,4 @@
-// controllers/builderController.js - Universal tree structure handler with improved cleanup
+// controllers/builderController.js - Minimal changes to original working code
 const structureBuilder = require('../services/structureBuilder');
 const treeGenerator = require('../services/treeGenerator');
 const cleanupUtils = require('../utils/cleanupUtils');
@@ -12,8 +12,6 @@ exports.generateStructure = async (req, res, next) => {
 
   try {
     const { treeText, projectName } = req.body;
-
-    console.log(`Generate structure request for project: ${projectName}`);
 
     if (!treeText || !projectName) {
       return res
@@ -41,11 +39,13 @@ exports.generateStructure = async (req, res, next) => {
     if (!fs.existsSync(tempDir)) {
       fs.mkdirSync(tempDir, { recursive: true });
     }
-    console.log(`Created temporary directory: ${tempDir}`);
+
+    // Do basic preprocessing of the tree text
+    let processedText = preprocessTreeText(treeText, projectName);
 
     // Build structure and create zip file
     zipFilePath = await structureBuilder.buildStructure(
-      treeText,
+      processedText,
       projectName,
       tempDir
     );
@@ -59,11 +59,6 @@ exports.generateStructure = async (req, res, next) => {
     if (zipStats.size === 0) {
       throw new Error('Generated zip file is empty');
     }
-
-    // Log the build result
-    console.log(
-      `Structure built for project "${projectName}" at ${zipFilePath}, size: ${zipStats.size} bytes`
-    );
 
     // Record paths for cleanup before they might be modified
     const zipPathToCleanup = zipFilePath;
@@ -98,6 +93,34 @@ exports.generateStructure = async (req, res, next) => {
     }
   }
 };
+
+// Simple preprocessing function - just ensure the root line is correct
+function preprocessTreeText(treeText, projectName) {
+  try {
+    // Split into lines
+    const lines = treeText.split('\n').filter((line) => line.trim());
+
+    if (lines.length === 0) return `${projectName}/`;
+
+    // Check if first line is the root
+    const firstLine = lines[0].trim();
+
+    // If first line doesn't end with slash or doesn't match project name, replace it
+    if (!firstLine.endsWith('/')) {
+      lines[0] = `${projectName}/`;
+    } else if (!firstLine.includes(projectName)) {
+      lines[0] = `${projectName}/`;
+    }
+
+    const result = lines.join('\n');
+
+    return result;
+  } catch (error) {
+    console.error('Error preprocessing tree text:', error);
+    // Return original text with projectName as first line
+    return `${projectName}/\n${treeText}`;
+  }
+}
 
 // Preview structure from tree text
 exports.previewStructure = async (req, res, next) => {

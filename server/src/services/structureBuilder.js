@@ -1,8 +1,7 @@
-// services/structureBuilder.js - Universal structure builder
+// services/structureBuilder.js - Simplistic approach that just works
 const fs = require('fs');
 const path = require('path');
 const archiver = require('archiver');
-const treeGenerator = require('./treeGenerator');
 
 // Build structure from tree text
 exports.buildStructure = async (treeText, projectName, tempDir) => {
@@ -16,235 +15,193 @@ exports.buildStructure = async (treeText, projectName, tempDir) => {
   fs.mkdirSync(projectDir, { recursive: true });
 
   try {
-    // Clean and parse the tree
-    const cleanedText = treeGenerator.cleanTreeText(treeText);
-    console.log('Tree text cleaned. Parsing structure...');
+    // Basic cleaning of the tree text
+    const cleanedText = cleanTreeText(treeText);
 
-    // Parse tree and create files
-    const { rootName, tree } = treeGenerator.parseTreeText(cleanedText);
-    console.log(`Parsed tree structure with root "${rootName}"`);
-
-    // Create the file structure based on the parsed tree
-    createFilesFromTree(tree, projectDir);
-    console.log('Created file structure in project directory');
+    // Simplistic line-by-line processing
+    simplifiedTreeProcessing(cleanedText, projectDir);
+    listDirectoryContents(projectDir);
 
     // Create zip file
     await createZipFile(projectDir, zipFilePath);
-    console.log(`Created zip file at: ${zipFilePath}`);
 
     return zipFilePath;
   } catch (error) {
-    console.error('Error building structure:', error);
-
-    // Fall back to direct line-by-line processing if parsing fails
-    try {
-      console.log('Falling back to line-by-line processing...');
-      processTreeLineByLine(treeText, projectDir);
-
-      // Create zip file
-      await createZipFile(projectDir, zipFilePath);
-      console.log(`Created zip file with fallback method: ${zipFilePath}`);
-
-      return zipFilePath;
-    } catch (fallbackError) {
-      console.error('Fallback processing failed:', fallbackError);
-
-      // Clean up in case of error
-      if (fs.existsSync(projectDir)) {
-        fs.rmSync(projectDir, { recursive: true, force: true });
-      }
-      throw error; // Throw the original error
+    // Clean up in case of error
+    if (fs.existsSync(projectDir)) {
+      fs.rmSync(projectDir, { recursive: true, force: true });
     }
+    throw error;
   }
 };
 
-// Create files and directories recursively from the parsed tree
-function createFilesFromTree(tree, baseDir) {
-  for (const [name, value] of Object.entries(tree)) {
-    // Skip completely if the name is empty or contains indentation characters
-    if (!name || !name.trim() || /^[\s│|├└─]+$/.test(name)) {
-      continue;
-    }
+// Clean tree text - basic handling of markdown and comments
+function cleanTreeText(treeText) {
+  if (!treeText) return '';
 
-    // Clean and sanitize the name
-    const safeName = name.trim().replace(/[<>:"|?*]/g, '_');
-
-    if (!safeName) continue; // Skip if empty after cleaning
-
-    try {
-      const itemPath = path.join(baseDir, safeName);
-
-      if (value === null) {
-        // This is a file
-        // Ensure parent directory exists (for safety)
-        const parentDir = path.dirname(itemPath);
-        if (!fs.existsSync(parentDir)) {
-          fs.mkdirSync(parentDir, { recursive: true });
-        }
-        fs.writeFileSync(itemPath, '');
-      } else {
-        // This is a directory
-        fs.mkdirSync(itemPath, { recursive: true });
-        createFilesFromTree(value, itemPath);
-      }
-    } catch (error) {
-      console.warn(`Error creating item "${name}":`, error.message);
-      // Continue processing other items
+  // Handle markdown code blocks
+  if (treeText.includes('```')) {
+    // Try to extract content from code blocks
+    const codeBlockMatch = treeText.match(/```[\w]*\n([\s\S]*?)\n```/);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+      treeText = codeBlockMatch[1];
+    } else {
+      // Just remove the code block markers
+      treeText = treeText.replace(/^```[\w]*\n|\n```$/g, '');
     }
   }
+
+  // Split into lines and filter out empty lines and comments
+  const lines = treeText.split('\n').filter((line) => {
+    const trimmedLine = line.trim();
+    return trimmedLine && !trimmedLine.startsWith('#');
+  });
+
+  return lines.join('\n');
 }
 
-// Fallback: process tree line by line (simpler, more tolerant approach)
-function processTreeLineByLine(treeText, rootDir) {
-  // Split into lines, filter empty lines
+/**
+ * Ultra-simplistic tree processing that ignores tree characters and just uses indentation
+ * @param {string} treeText - Tree structure text
+ * @param {string} rootDir - Root directory path
+ */
+function simplifiedTreeProcessing(treeText, rootDir) {
   const lines = treeText.split('\n').filter((line) => line.trim());
 
   if (lines.length === 0) {
-    throw new Error('No valid lines found in tree structure');
+    throw new Error('No valid lines found');
   }
 
-  // Create a map to store paths and their parent relationships
-  const items = [];
+  // Get just the root name (no slash, no tree chars)
+  let rootName = '';
+  const firstLine = lines[0].trim();
+  if (firstLine.endsWith('/')) {
+    rootName = firstLine.substring(0, firstLine.length - 1);
+  } else {
+    rootName = firstLine;
+  }
 
-  // Process each line to extract items
-  for (let i = 0; i < lines.length; i++) {
-    let line = lines[i].trim();
+  // Create the file structure by tracking indentation precisely
+  const pathSegments = [];
+  const indentLevels = {};
 
-    // Skip empty lines
-    if (!line) continue;
+  // Process line by line (skip the root)
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i];
+    if (!line.trim()) continue;
 
-    // Skip the root line (first line) - we've already created the root dir
-    if (i === 0 && line.endsWith('/')) continue;
+    // Count visual indentation (leading spaces, including tree chars)
+    const indent = countLeadingSpaces(line);
 
-    // Check if this is a file/folder entry (starts with connector)
-    if (!line.match(/^(├|└|─|\||>|-)/)) {
-      // Not a clear file/folder line, try to extract any valid name
-      const possibleName = line.replace(/[^\w\-.]/g, '_').trim();
-      if (possibleName) {
-        items.push({
-          name: possibleName,
-          isDirectory: false,
-          level: 0, // Root level as fallback
-        });
-      }
-      continue;
-    }
-
-    // Extract just the name part (after connectors and indentation)
-    // This aggressive regex removes all connector characters and indentation
-    let name = line.replace(/^[├└─\s│|\-\s>]+/, '').trim();
-
-    // Check if this is a directory
+    // Extract name (ultra aggressively remove all tree chars)
+    let name = extractNameAggressively(line);
     const isDirectory = name.endsWith('/');
 
-    // Remove trailing slash for directory
     if (isDirectory) {
-      name = name.slice(0, -1).trim();
+      name = name.slice(0, -1);
     }
 
-    // Skip if name is empty or contains only separators
-    if (!name || /^[\s│|├└─]+$/.test(name)) {
-      continue;
+    // Skip empty names
+    if (!name) continue;
+
+    // Map indentation to level
+    let level = 1; // Default to level 1 (direct child of root)
+
+    // Find closest smaller indent level
+    const indents = Object.keys(indentLevels)
+      .map(Number)
+      .sort((a, b) => b - a);
+    for (const prevIndent of indents) {
+      if (indent > prevIndent) {
+        level = indentLevels[prevIndent] + 1;
+        break;
+      } else if (indent === prevIndent) {
+        level = indentLevels[prevIndent];
+        break;
+      }
     }
 
-    // Clean the name
-    const safeName = name.replace(/[<>:"|?*]/g, '_').trim();
-    if (!safeName) continue;
+    // Store this level
+    indentLevels[indent] = level;
 
-    // Count indentation level (very approximate)
-    const indentLevel = (line.match(/[│|]/g) || []).length;
+    // Adjust path segments array
+    pathSegments.length = level; // Truncate to current level
+    pathSegments[level - 1] = name;
 
-    // Store this item
-    items.push({
-      name: safeName,
-      isDirectory,
-      level: indentLevel,
-    });
-  }
+    // Build full path without root name (it's already the base dir)
+    const itemPath = path.join(rootDir, ...pathSegments);
 
-  // Create the items (flat first, then try to organize)
-  for (const item of items) {
     try {
-      const itemPath = path.join(rootDir, item.name);
-
-      if (item.isDirectory) {
+      if (isDirectory) {
+        // Create directory
         fs.mkdirSync(itemPath, { recursive: true });
       } else {
-        // Ensure parent directory exists
+        // Create file - ensure parent dir exists
         const parentDir = path.dirname(itemPath);
         if (!fs.existsSync(parentDir)) {
           fs.mkdirSync(parentDir, { recursive: true });
         }
         fs.writeFileSync(itemPath, '');
       }
-    } catch (error) {
-      console.warn(`Error creating item "${item.name}":`, error.message);
-      // Continue with next item
-    }
-  }
-
-  // Try to organize items into common folders based on naming patterns
-  organizeCommonFolders(rootDir);
-}
-
-// Organize files into common folders based on naming patterns
-function organizeCommonFolders(rootDir) {
-  // Get all files in the root directory
-  const rootItems = fs.readdirSync(rootDir, { withFileTypes: true });
-  const fileItems = rootItems.filter((item) => item.isFile());
-  const folderItems = rootItems.filter((item) => item.isDirectory());
-
-  // Common folder patterns to match
-  const commonFolders = [
-    'config',
-    'controller',
-    'service',
-    'repository',
-    'model',
-    'dto',
-    'java',
-    'resources',
-    'impl',
-    'util',
-    'entity',
-    'exception',
-  ];
-
-  // For each folder, find files that might belong in it
-  for (const folder of folderItems) {
-    const folderName = folder.name.toLowerCase();
-
-    // Skip if not a common folder
-    if (!commonFolders.includes(folderName)) continue;
-
-    // For each file, see if it should go in this folder
-    for (const file of fileItems) {
-      const fileName = file.name.toLowerCase();
-
-      // If file name contains folder name or ends with it
-      if (fileName.includes(folderName) || fileName.endsWith(folderName)) {
-        try {
-          // Move the file to the folder
-          const sourcePath = path.join(rootDir, file.name);
-          const targetPath = path.join(rootDir, folder.name, file.name);
-
-          fs.writeFileSync(targetPath, fs.readFileSync(sourcePath));
-          fs.unlinkSync(sourcePath);
-        } catch (error) {
-          console.warn(`Error moving file ${file.name}:`, error.message);
-        }
-      }
+    } catch (err) {
+      console.warn(`Error creating item at ${itemPath}: ${err.message}`);
     }
   }
 }
 
-// Create zip file from directory
+/**
+ * Count leading whitespace and tree characters
+ * @param {string} line - Line to analyze
+ * @returns {number} - Number of leading characters
+ */
+function countLeadingSpaces(line) {
+  let count = 0;
+  while (count < line.length) {
+    const char = line.charAt(count);
+    if (
+      char === ' ' ||
+      char === '\t' ||
+      char === '│' ||
+      char === '├' ||
+      char === '└' ||
+      char === '─'
+    ) {
+      count++;
+    } else {
+      break;
+    }
+  }
+  return count;
+}
+
+/**
+ * Ultra-aggressively extract name by removing all tree characters
+ * @param {string} line - Line to extract name from
+ * @returns {string} - Clean name
+ */
+function extractNameAggressively(line) {
+  // Keep only alphanumeric, dots, dashes, underscores, and slashes
+  const cleanLine = line.replace(/[│├└─\s]/g, '');
+
+  // If line is now empty, try a more lenient approach
+  if (!cleanLine) {
+    // More lenient approach - just remove known tree chars
+    return line.replace(/^[\s│├└─]*/, '').trim();
+  }
+
+  return cleanLine;
+}
+
+/**
+ * Create zip file from directory
+ * @param {string} sourceDir - Source directory path
+ * @param {string} outputPath - Output zip file path
+ * @returns {Promise} - Promise resolving to zip file path
+ */
 function createZipFile(sourceDir, outputPath) {
   return new Promise((resolve, reject) => {
     const output = fs.createWriteStream(outputPath);
-    const archive = archiver('zip', {
-      zlib: { level: 9 }, // Compression level
-    });
+    const archive = archiver('zip', { zlib: { level: 9 } });
 
     output.on('close', () => {
       resolve(outputPath);
@@ -255,7 +212,34 @@ function createZipFile(sourceDir, outputPath) {
     });
 
     archive.pipe(output);
+
+    // Use false parameter to ensure files are at the root of the zip
     archive.directory(sourceDir, false);
+
     archive.finalize();
   });
+}
+
+/**
+ * List directory contents recursively (for debugging)
+ * @param {string} dir - Directory to list
+ * @param {string} indent - Indentation for nested output
+ */
+function listDirectoryContents(dir, indent = '') {
+  try {
+    const items = fs.readdirSync(dir);
+
+    items.forEach((item) => {
+      const itemPath = path.join(dir, item);
+      const stats = fs.statSync(itemPath);
+
+      if (stats.isDirectory()) {
+        listDirectoryContents(itemPath, `${indent}  `);
+      } else {
+        console.log(`${indent}${item}`);
+      }
+    });
+  } catch (error) {
+    console.error(`Error listing directory ${dir}:`, error);
+  }
 }

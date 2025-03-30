@@ -1,4 +1,4 @@
-// services/treeGenerator.js - Universal tree parser for multiple formats
+// services/treeGenerator.js - Fixed tree parser for better indentation
 const path = require('path');
 const fs = require('fs');
 
@@ -16,8 +16,8 @@ exports.formatTree = (rootName, tree) => {
 
     entries.forEach(([key, value], index) => {
       const isLastItem = index === entries.length - 1;
-      // Use └─ for the last item, ├─ for all others
-      const connector = isLastItem ? '└─ ' : '├─ ';
+      // Use └── for the last item, ├── for all others
+      const connector = isLastItem ? '└── ' : '├── ';
       const line = `${prefix}${connector}${key}${value === null ? '' : '/'}\n`;
       result += line;
 
@@ -25,7 +25,7 @@ exports.formatTree = (rootName, tree) => {
         // For the prefix of children:
         // - If this was the last item, use spaces (no vertical line)
         // - Otherwise, use a vertical line to connect to subsequent siblings
-        const childPrefix = `${prefix}${isLastItem ? '   ' : '│  '}`;
+        const childPrefix = `${prefix}${isLastItem ? '    ' : '│   '}`;
         formatNode(value, childPrefix);
       }
     });
@@ -73,8 +73,6 @@ exports.cleanTreeText = function (treeText) {
       return hashIndex > -1 ? line.substring(0, hashIndex).trim() : line;
     });
 
-  console.log(`filteredLines=${filteredLines}`);
-
   // Find the first line with a directory name (ends with /)
   let rootLineIndex = filteredLines.findIndex((line) =>
     /^[^/\s]+\/\s*$/.test(line.trim())
@@ -106,8 +104,7 @@ exports.cleanTreeText = function (treeText) {
 };
 
 /**
- * Parse tree text into a structured object
- * Works with multiple tree formats
+ * Enhanced tree text parser that handles standard format
  * @param {string} treeText - The tree text to parse
  * @returns {object} - Parsed tree structure
  */
@@ -119,7 +116,7 @@ exports.parseTreeText = (treeText) => {
     throw new Error('No valid content found in tree structure');
   }
 
-  // More robust root parsing
+  // Extract root name
   const rootLine = lines[0].trim();
   const rootMatch = rootLine.match(/^([^/]+)\/\s*$/);
 
@@ -127,91 +124,61 @@ exports.parseTreeText = (treeText) => {
     throw new Error('Invalid tree format: Root directory not found');
   }
 
-  const rootName = rootMatch[1];
+  const rootName = rootMatch[1].replace(/[│├└─\s]+/g, ''); // Clean root name
   const tree = {};
 
-  // Track path and depth more flexibly
-  const pathAtLevel = [tree];
-  const depthAtLevel = [0];
+  // More flexible path tracking with state machine approach
+  const pathStack = [{ node: tree, level: 0 }];
 
   // Process each line after the root
   for (let i = 1; i < lines.length; i++) {
     const line = lines[i];
-
-    // Skip empty lines
     if (!line.trim()) continue;
 
-    // More flexible indentation calculation
-    let indentLevel = 0;
-    let j = 0;
-
-    // Count indentation using a flexible approach
-    while (j < line.length) {
-      if (line[j] === ' ' || line[j] === '\t') {
-        // Skip whitespace but don't count for level
-        j++;
-      } else if (line[j] === '│' || line[j] === '|') {
-        // Vertical lines indicate hierarchy
-        indentLevel++;
-        j++;
-      } else if (
-        line.substring(j).match(/^(├[─\-]+|└[─\-]+|--|\|-|`-|\+\|──|\|─+)/)
-      ) {
-        // Found an item connector, we're done counting
-        break;
-      } else {
-        // Some other character, probably part of the name
-        break;
-      }
-    }
-
-    // Extract the file/folder name with more flexible parsing
-    let name = '';
+    // Detect the indentation level more accurately
+    let level = 0;
+    let entryName = '';
     let isDirectory = false;
 
-    // Skip connector characters to get to the name
-    const connectorMatch = line
-      .substring(j)
-      .match(/^(?:├[─\-]+|└[─\-]+|--|\|-|`-|\+\|──|\|─+|[│|])[\s]*/);
-    if (connectorMatch) {
-      j += connectorMatch[0].length;
+    // Calculate level by looking at indentation
+    const indentMatch = line.match(/^((?:│\s{3}|\s{4}|│\s*)*)/);
+    if (indentMatch) {
+      level = Math.ceil(indentMatch[0].length / 4);
     }
 
-    // The rest of the line is the name (possibly with a trailing slash)
-    name = line.substring(j).trimEnd();
+    // Extract name, removing all connector characters
+    entryName = line.replace(/^(?:│\s*)*(?:├──|└──|├─|└─|─|│)*\s*/, '').trim();
 
-    // Check if this is a directory
-    if (name.endsWith('/')) {
-      isDirectory = true;
-      name = name.slice(0, -1); // Remove trailing slash
+    // Check if it's a directory
+    isDirectory = entryName.endsWith('/');
+    if (isDirectory) {
+      entryName = entryName.slice(0, -1); // Remove trailing slash
     }
 
-    // Clean up the name
-    name = name.trim();
+    // Skip empty names or purely decorative lines
+    if (!entryName || /^[│├└─\s]+$/.test(entryName)) continue;
 
-    // Skip if we have an empty name after all that
-    if (!name) continue;
+    // Clean any special characters that aren't allowed in file/folder names
+    entryName = entryName.replace(/[<>:"|?*\\]/g, '_');
 
-    // Adjust current position in the tree based on indent level
+    // Find the parent node based on level
     while (
-      depthAtLevel.length > 1 &&
-      depthAtLevel[depthAtLevel.length - 1] >= indentLevel
+      pathStack.length > 1 &&
+      pathStack[pathStack.length - 1].level >= level
     ) {
-      pathAtLevel.pop();
-      depthAtLevel.pop();
+      pathStack.pop();
     }
 
-    // Get the current parent node
-    const parentNode = pathAtLevel[pathAtLevel.length - 1];
+    const parent = pathStack[pathStack.length - 1].node;
 
     if (isDirectory) {
-      // Add directory and push it onto our path
-      parentNode[name] = {};
-      pathAtLevel.push(parentNode[name]);
-      depthAtLevel.push(indentLevel);
+      // Create directory node
+      parent[entryName] = {};
+      // Push this directory onto the stack for its children
+      pathStack.push({ node: parent[entryName], level: level });
     } else {
-      // Add file
-      parentNode[name] = null;
+      // Create file (leaf) node
+      parent[entryName] = null;
     }
   }
 
