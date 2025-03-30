@@ -48,9 +48,9 @@ const FileUploader = ({ onUpload }) => {
       return;
     }
 
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      setError('File size exceeds 10MB limit');
+    // Check file size (max 50MB)
+    if (file.size > 50 * 1024 * 1024) {
+      setError('File size exceeds 50MB limit');
       return;
     }
 
@@ -110,7 +110,7 @@ const FileUploader = ({ onUpload }) => {
                 Browse Files
               </button>
               <p className="file-requirements">
-                Maximum file size: 10MB
+                Maximum file size: 50MB
                 <br />
                 Supported format: ZIP
               </p>

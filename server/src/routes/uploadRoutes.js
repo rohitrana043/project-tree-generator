@@ -33,7 +33,7 @@ const storage = multer.diskStorage({
 
 // Get max upload size from environment variables
 const MAX_UPLOAD_SIZE =
-  parseInt(process.env.MAX_UPLOAD_SIZE) || 10 * 1024 * 1024; // 10MB default
+  parseInt(process.env.MAX_UPLOAD_SIZE) || 50 * 1024 * 1024; // 50MB default
 
 const upload = multer({
   storage: storage,

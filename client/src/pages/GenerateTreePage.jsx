@@ -105,7 +105,7 @@ const GenerateTreePage = () => {
           <h3>What file types can I upload to generate a tree structure?</h3>
           <p>
             Currently, the tool supports ZIP files containing your project
-            files. The maximum file size is 10MB.
+            files. The maximum file size is 50MB.
           </p>
         </div>
         <div className="faq-item">
